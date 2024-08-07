@@ -2,7 +2,7 @@ restricted_tlds=("af" "by" "cu" "er" "gn" "ir" "kp" "lr" "ru" "ss" "su" "sy" "zw
 shopt -s expand_aliases
 
 source ./lib/acme.sh.env
-
+source ../common/utils.sh
 # Function to check if a domain is restricted
 is_ok_domain_zerossl() {
     domain="$1"
@@ -19,7 +19,7 @@ function get_cert() {
     # ./lib/acme.sh --register-account -m my@example.com
 
     DOMAIN=$1
-    ssl_cert_path=../ssl
+    ssl_cert_path=/opt/hiddify-manager/ssl
     rm -f $ssl_cert_path/$DOMAIN.key
 
     if [ ${#DOMAIN} -le 64 ]; then
@@ -28,16 +28,17 @@ function get_cert() {
         # systemctl reload --now hiddify-nginx
 
         DOMAIN_IP=$(dig +short -t a $DOMAIN.)
-        echo "resolving domain $DOMAIN -> IP= $DOMAIN_IP ServerIP-> $SERVER_IP"
-        if [[ $SERVER_IP != $DOMAIN_IP ]]; then
-            echo "maybe it is an error! make sure that it is correct"
+        DOMAIN_IPv6=$(dig +short -t aaaa $DOMAIN.)
+        echo "resolving domain $DOMAIN : IP=$DOMAIN_IP IPv6=$DOMAIN_IPv6   ServerIP=$SERVER_IP ServerIPv6=$SERVER_IPv6"
+        if [[ "$SERVER_IP" == "" || $SERVER_IP != $DOMAIN_IP ]] && [[ "$SERVER_IPv6" == "" || $SERVER_IPv6 != $DOMAIN_IPv6 ]]; then
+            error "maybe it is an error! make sure that it is correct"
             #sleep 10
         fi
 
         flags=
-        if [ "$SERVER_IPv6" != "" ]; then
-            flags="--listen-v6"
-        fi
+        # if [ "$SERVER_IPv6" != "" ]; then
+        #     flags="--listen-v6"
+        # fi
 
         acme.sh --issue -w /opt/hiddify-manager/acme.sh/www/ -d $DOMAIN --log $(pwd)/../log/system/acme.log --server letsencrypt --pre-hook "systemctl restart hiddify-nginx"
         if is_ok_domain_zerossl "$DOMAIN"; then
@@ -75,7 +76,7 @@ function get_cert() {
 }
 
 function has_valid_cert() {
-    certificate="../ssl/$1.crt"
+    certificate="/opt/hiddify-manager/ssl/$1.crt"
 }
 
 function get_self_signed_cert() {
@@ -85,14 +86,14 @@ function get_self_signed_cert() {
         echo "Domain length exceeds 64 characters. Truncating to the first 64 characters."
         d="${d:0:64}"
     fi
-    mkdir -p ../ssl
-    local certificate="../ssl/$d.crt"
-    local private_key="../ssl/$d.crt.key"
+    mkdir -p /opt/hiddify-manager/ssl
+    local certificate="/opt/hiddify-manager/ssl/$d.crt"
+    local private_key="/opt/hiddify-manager/ssl/$d.crt.key"
     local current_date=$(date +%s)
     local generate_new_cert=0
     # Check if the certificate file exists
     if [ ! -f "$certificate" ]; then
-        echo "Certificate $d file not found. Generating a new certificate."
+        echo "Certificate $d ($certificate) file not found. Generating a new certificate."
         generate_new_cert=1
     else
         local expire_date=$(openssl x509 -enddate -noout -in "$certificate" | cut -d= -f2-)
@@ -100,19 +101,19 @@ function get_self_signed_cert() {
         local expire_date_seconds=$(date -d "$expire_date" +%s)
 
         if [ "$current_date" -ge "$expire_date_seconds" ]; then
-            echo "Certificate $d is expired. Generating a new certificate."
+            echo "Certificate $d ($certificate) is expired. Generating a new certificate."
             generate_new_cert=1
         fi
     fi
 
     # Check if the private key file exists
     if [ ! -f "$private_key" ]; then
-        echo "Private key file $d not found. Generating a new certificate."
+        echo "Private key file $d ($private_key) not found. Generating a new certificate."
         generate_new_cert=1
     else
         # Check if the private key is valid
         if ! openssl rsa -check -in "$private_key" >/dev/null && ! openssl ec -check -in "$private_key" >/dev/null; then
-            echo "Private key $d is invalid. Generating a new certificate."
+            echo "Private key $d ($private_key) is invalid. Generating a new certificate."
             generate_new_cert=1
         fi
     fi

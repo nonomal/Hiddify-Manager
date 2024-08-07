@@ -17,7 +17,7 @@ checkOS
 export DEBIAN_FRONTEND=noninteractive
 NAME="installer"
 LOG_FILE="$(log_file $NAME)"
-export USE_VENV=false
+export USE_VENV=true
 
 if [ ! -f /opt/hiddify-manager/install.sh ]; then
     rm -rf /opt/hiddify-manager
@@ -67,7 +67,7 @@ function install_panel() {
     post_update_tasks  "$panel_update" "$config_update" "$package_mode"
     
     if is_installed hiddifypanel && [[ -z "$package_mode" || ($package_mode == "develop" || $package_mode == "beta" || $package_mode == "release") ]]; then
-        (cd /opt/hiddify-manager/hiddify-panel && hiddifypanel set-setting -k package_mode -v $1)
+        hiddify-panel-cli set-setting -k package_mode -v $1
     fi
 }
 
@@ -80,19 +80,24 @@ function update_panel() {
     # Set panel_update to 1 if an update is performed
     
     case "$package_mode" in
-        v.*)
+        v*)
             update_progress "Updating..." "Hiddify Panel from $current_panel_version to $latest" 10
             panel_path=$(hiddifypanel_path)
             disable_panel_services
-            pip3 install -U --no-deps --force-reinstall git+https://github.com/hiddify/HiddifyPanel#${package_mode}
-            pip3 install git+https://github.com/hiddify/HiddifyPanel#${package_mode}
+            if [ "$USE_VENV" = "true" ]; then
+                /opt/hiddify-manager/.venv/bin/python -m pip install -U --no-deps --force-reinstall git+https://github.com/hiddify/HiddifyPanel@${package_mode}
+                /opt/hiddify-manager/.venv/bin/python -m pip install git+https://github.com/hiddify/HiddifyPanel@${package_mode}
+            else 
+               pip3 install -U --no-deps --force-reinstall git+https://github.com/hiddify/HiddifyPanel@${package_mode}
+               pip3 install git+https://github.com/hiddify/HiddifyPanel@${package_mode}
+            fi
             update_progress "Updated..." "Hiddify Panel to ${package_mode}" 50
             return 0
         ;;
         develop|dev)
             # Use the latest commit from GitHub
             latest=$(get_commit_version Hiddify-Panel)
-            
+            activate_python_venv
             warning "DEVLEOP: hiddify panel version current=$current_panel_version latest=$latest"
             if [[ "$current_panel_version" != "$latest" ]]; then
                 error "The current develop version is outdated! Updating..."
@@ -101,8 +106,9 @@ function update_panel() {
                 update_progress "Updating..." "Hiddify Panel from $current_panel_version to $latest" 10
                 panel_path=$(hiddifypanel_path)
                 disable_panel_services
-                pip3 install -U --no-deps --force-reinstall git+https://github.com/hiddify/HiddifyPanel
-                pip3 install git+https://github.com/hiddify/HiddifyPanel
+                
+                /opt/hiddify-manager/.venv/bin/python -m pip install -U --no-deps --force-reinstall git+https://github.com/hiddify/HiddifyPanel
+                /opt/hiddify-manager/.venv/bin/python -m pip install git+https://github.com/hiddify/HiddifyPanel
                 echo $latest >$panel_path/VERSION
                 sed -i "s/__version__='[^']*'/__version__='$latest'/" $panel_path/VERSION.py
                 update_progress "Updated..." "Hiddify Panel to $latest" 50
@@ -110,6 +116,7 @@ function update_panel() {
             fi
         ;;
         beta)
+            activate_python_venv
             latest=$(get_pre_release_version hiddify-panel)
             warning "BETA: hiddify panel version current=$current_panel_version latest=$latest"
             if [[ "$current_panel_version" != "$latest" ]]; then
@@ -119,12 +126,13 @@ function update_panel() {
                 update_progress "Updating..." "Hiddify Panel from $current_panel_version to $latest" 10
                 # pip install -U --pre hiddifypanel==$latest
                 disable_panel_services
-                pip install -U --pre hiddifypanel
+                /opt/hiddify-manager/.venv/bin/python -m pip install -U --pre hiddifypanel
                 update_progress "Updated..." "Hiddify Panel to $latest" 50
                 return 0
             fi
         ;;
         release)
+            activate_python_venv
             # error "you can not install release version 8 using this script"
             # exit 1
             latest=$(get_release_version hiddify-panel)
@@ -136,7 +144,7 @@ function update_panel() {
                 update_progress "Updating..." "Hiddify Panel from $current_panel_version to $latest" 10
                 # pip3 install -U hiddifypanel==$latest
                 disable_panel_services
-                pip3 install -U hiddifypanel
+                /opt/hiddify-manager/.venv/bin/python -m pip install -U hiddifypanel
                 update_progress "Updated..." "Hiddify Panel to $latest" 50
                 return 0
             fi
@@ -157,9 +165,10 @@ function update_config() {
     local current_config_version=$(get_installed_config_version)
     
     case "$package_mode" in
-        v.*)
+        v*)
             update_progress "Updating..." "Hiddify Config from $current_config_version to $latest" 60
-            update_from_github "hiddify-manager.zip" "https://github.com/hiddify/Hiddify-Manager/archive/refs/tags/${package_mode}.zip" $latest
+            #update_from_github "hiddify-manager.tar.gz" "https://github.com/hiddify/Hiddify-Manager/archive/refs/tags/${package_mode}.tar.gz" $latest
+            update_from_github "hiddify-manager.zip" "https://github.com/hiddify/Hiddify-Manager/releases/download/${package_mode}/hiddify-manager.zip" $latest
             update_progress "Updated..." "Hiddify Config to $latest" 100
             return 0
         ;;
@@ -223,18 +232,18 @@ function post_update_tasks() {
     
     cd /opt/hiddify-manager/hiddify-panel
     if [ "$CREATE_EASYSETUP_LINK" == "true" ];then
-        hiddifypanel set-setting --key create_easysetup_link --val True
+        hiddify-panel-cli set-setting --key create_easysetup_link --val True
     fi
     
     case "$package_mode" in
         release|beta)
-            hiddifypanel set-setting --key package_mode --val $package_mode
+            hiddify-panel-cli set-setting --key package_mode --val $package_mode
         ;;
         dev|develop)
-            hiddifypanel set-setting --key package_mode --val develop
+            hiddify-panel-cli set-setting --key package_mode --val develop
         ;;
         *)
-            hiddifypanel set-setting --key auto_update --val False
+            hiddify-panel-cli set-setting --key auto_update --val False
         ;;
     esac
     
@@ -256,7 +265,7 @@ function update_from_github() {
     if [[ "$file_type" == "zip" ]]; then
         install_package unzip
         unzip -q -o "$file_name"
-        elif [[ "$file_type" == "gz" ]]; then
+    elif [[ "$file_type" == "gz" ]]; then
         tar xzf "$file_name" --strip-components=1
     else
         echo "Unsupported file type: $file_type"
@@ -271,10 +280,38 @@ function update_from_github() {
     bash install.sh --no-gui --no-log
 }
 
-check_venv_compatibility "$@"
+function custom_version_installer(){
+    #TAGS=$(curl -s "https://api.github.com/repos/hiddify/hiddify-manager/tags?per_page=1000" | jq -r '.[].name')
+    TAGS=$(curl -s "https://pypi.org/pypi/hiddifypanel/json" | jq -r '.releases | keys[]'|sort -V -r)
+    version_gt() {
+        [ "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1" ]
+    }
+    FILTERED_TAGS=("release" "" "beta" "" "dev" "")
+    for tag in $TAGS; do
+        if [[ ! $tag =~ dev ]] && version_gt "$tag" "10.0.0"; then
+            FILTERED_TAGS+=("v$tag" "")
+        fi
+    done
+    TAG_LIST=$(printf "%s " "${FILTERED_TAGS[@]}")
+    SELECTED_TAG=$(whiptail --title "Custom version Installer" --menu "Choose a version! Note: Downgrade is not supported!" 20 70 12 "${FILTERED_TAGS[@]}" 3>&1 1>&2 2>&3)
+    if [ $? -eq 0 ]; then
+        echo "You selected: $SELECTED_TAG"
+        $0 $SELECTED_TAG
+    else
+        echo "No tag selected."
+        exit 1
+    fi
+}
 
+if [[ " $@ " == *" custom "* ]];then
+    custom_version_installer
+    exit $?
+fi
+
+check_venv_compatibility "$@"
 install_python
 pip3 install --upgrade pip
+
 
 
 # Run the main function and log the output

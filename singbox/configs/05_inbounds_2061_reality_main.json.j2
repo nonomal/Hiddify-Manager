@@ -1,5 +1,5 @@
 {
-	{% if hconfigs['vless_enable'] and hconfigs['reality_enable'] %}
+	{% if hconfigs['reality_enable'] %}
 		"inbounds": [
 			{% for d in domains if d['internal_port_reality'] and not d['grpc'] %}
 			{%set domain=d['domain']%}
@@ -38,7 +38,7 @@
 						"max_time_difference": "2h"
 					}
 				},
-				{% include "includes/multiplex.json.j2"%}
+				{% include "includes/multiplex.json.pj2"%}
 			},
 			{%endfor %}
 		]

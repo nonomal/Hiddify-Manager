@@ -1,7 +1,240 @@
 # Changelog
 
 
-## (unreleased)
+## v10.70.1 (2024-07-30)
+
+### Fix
+
+* Changing default os python version. [hiddify-com]
+
+* Haproxy installation bug. [hiddify-com]
+
+### Other
+
+* Use: domain socket instead of port in splithttp. [hiddify-com]
+
+
+## v10.70.0 (2024-07-29)
+
+### New
+
+* Add custom url test. [hiddify-com]
+
+* Add quic support for splithttp and panel. [hiddify-com]
+
+* Some optimization and add splithttp. [hiddify-com]
+
+### Fix
+
+* Fakesni bugs. [hiddify-com]
+
+* Singbox bug. [hiddify-com]
+
+* Cert bugs. [hiddify-com]
+
+* Firewall for quic. [hiddify-com]
+
+* Haproxy ss bug. [hiddify-com]
+
+* Bug. [hiddify-com]
+
+* Ssh error bug. [hiddify-com]
+
+* Cert issue first install. [hiddify-com]
+
+* Bugs. [hiddify-com]
+
+* Split http bug. [hiddify-com]
+
+* Permission for sshd. [hiddify-com]
+
+* Version. [hiddify-com]
+
+* Tls bug in fake domain. [hiddify-com]
+
+* Bug. [hiddify-com]
+
+### Other
+
+* Show all domain configs in cli. [hiddify-com]
+
+* Merge branch 'haproxyv3' [hiddify-com]
+
+* Update haproxy to v3. [hiddify-com]
+
+* Add splithttp h2 to nginx. [hiddify-com]
+
+* Revert using map. [hiddify-com]
+
+* Change to map for extra performance. [hiddify-com]
+
+* Update app.cfg. [Hiddify]
+
+* Remove cdn from getting cert. [hiddify-com]
+
+* Merge pull request #4287 from SATORU-FUJINUMA/main. [Hiddify]
+
+  Add automated support for LXC containers
+
+* Create README.fa.md. [Satoru]
+
+* Update README.md. [Satoru]
+
+* README.md for LXC containers. [Satoru]
+
+* Add utils to bind container ports automatically. [SATORU-FUJINUMA]
+
+* Fix fedora LXD installation. [SATORU-FUJINUMA]
+
+* Add scripts to bind ports from LXC. [SATORU-FUJINUMA]
+
+* Fix echo bug. [SATORU-FUJINUMA]
+
+* Print admin links and TUI information. [SATORU-FUJINUMA]
+
+* Add printing admin links. [SATORU-FUJINUMA]
+
+* Make alma/rocky suport. [SATORU-FUJINUMA]
+
+* Rename operation dir. [SATORU-FUJINUMA]
+
+* Be verbose about OS detection. [Satoru]
+
+* Add LXD setup file. [SATORU-FUJINUMA]
+
+
+## v10.50.4 (2024-07-17)
+
+### Fix
+
+* Small bugs. [hiddify-com]
+
+
+## v10.50.3 (2024-07-14)
+
+### Fix
+
+* Installation but. [hiddify-com]
+
+
+## v10.50.2 (2024-07-14)
+
+### Fix
+
+* Panel version. [hiddify-com]
+
+### Other
+
+* Update LICENSE to GPLv3. [Hiddify]
+
+* Update README.md. [Hiddify]
+
+* Merge pull request #4238 from mmmray/patch-1. [Hiddify]
+
+  Update README.md
+
+* Update README.md. [mmmray]
+
+  https://github.com/XTLS/Xray-core/pull/2459#issuecomment-2079547682
+
+
+## v10.50.1 (2024-07-14)
+
+### Fix
+
+* Sing routing. [hiddify-com]
+
+
+## v10.50.0 (2024-07-14)
+
+### Fix
+
+* Bug. [hiddify-com]
+
+* Diasplay bug. [hiddify-com]
+
+* Ipv6 cert. [hiddify-com]
+
+* Bug. [hiddify-com]
+
+* Ssh password auth warning bug. [hiddify-com]
+
+* Singbox routing issue. [hiddify-com]
+
+* Custom version installer. [hiddify-com]
+
+* Custom version installer. [hiddify-com]
+
+* Wireguard enable/disable users. [hiddify-com]
+
+### Other
+
+* Force installation in venv. [hiddify-com]
+
+* Allow host to be empty. [hiddify-com]
+
+* Make reality and vless independently enable or disable. [hiddify-com]
+
+* Hidding configs. [hiddify-com]
+
+* More optimization in api communication. [hiddify-com]
+
+
+## v10.30.6 (2024-07-06)
+
+### Fix
+
+* Shadowsocks firewall. [hiddify-com]
+
+### Other
+
+* Remove old domains from crts. [hiddify-com]
+
+
+## v10.30.5 (2024-07-03)
+
+### Other
+
+* Chg hiddify-panel user shell to bash. [hiddify-com]
+
+
+## v10.30.4 (2024-07-02)
+
+### Fix
+
+* Bug. [hiddify-com]
+
+
+## v10.30.3 (2024-07-02)
+
+### Fix
+
+* Update usage bug. [hiddify-com]
+
+
+## v10.30.2 (2024-07-02)
+
+### Fix
+
+* Bug. [hiddify-com]
+
+
+## v10.30.1 (2024-07-02)
+
+### Fix
+
+* Permission issue. [hiddify-com]
+
+* Installer venv. [hiddify-com]
+
+### Other
+
+* Fix. [hiddify-com]
+
+* Fix venv. [hiddify-com]
+
+
+## v10.30.0 (2024-07-02)
 
 ### Changes
 
@@ -58,6 +291,22 @@
 * Haproxy install check. [Sarina]
 
 ### Other
+
+* Update. [hiddify-com]
+
+* Update. [hiddify-com]
+
+* Merge branch 'main' of github.com:hiddify/Hiddify-Manager. [hiddify-com]
+
+* Update app.cfg. [Hiddify]
+
+* Update app.cfg. [Hiddify]
+
+* Better panel management. [hiddify-com]
+
+* Better purge. [hiddify-com]
+
+* Better logging. [hiddify-com]
 
 * Do not delete resolveconf. [hiddify-com]
 

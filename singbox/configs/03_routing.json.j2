@@ -45,15 +45,18 @@
                 "hiddify-hetzner-warp",
                 "ookla-speedtest"
               
-            ],
-            "domain":[
-                {% if hconfigs['warp_mode'] != 'disable' %}
+            ]
+        },
+        {% if hconfigs['warp_mode'] != 'disable' and hconfigs.get('warp_sites','').split('\n') %}
+        {
+            "outbound": "WARP",
+            "domain":[                
                   {%for d in hconfigs.get('warp_sites','').split('\n')%}
                       "{{d.strip()}}",
                   {% endfor %}
-                {% endif %}
             ]
         },
+        {% endif %}
         {
           "outbound": "blackhole", "geoip": ["private"]
         }

@@ -3,6 +3,10 @@ activate_python_venv
 install_package wireguard libev-dev libevdev2 default-libmysqlclient-dev build-essential pkg-config
 
 useradd -m hiddify-panel -s /bin/bash >/dev/null 2>&1
+echo -n "" >> ../log/system/panel.log
+chown hiddify-panel ../log/system/panel.log
+chsh hiddify-panel -s /bin/bash
+
 chown -R hiddify-panel:hiddify-panel /home/hiddify-panel/ >/dev/null 2>&1
 localectl set-locale LANG=C.UTF-8 >/dev/null 2>&1
 su hiddify-panel -c update-locale LANG=C.UTF-8 >/dev/null 2>&1
@@ -47,11 +51,14 @@ ln -sf $(which uwsgi) /usr/local/bin/uwsgi >/dev/null 2>&1
 # hiddifypanel init-db
 ln -sf $(pwd)/hiddify-panel.service /etc/systemd/system/hiddify-panel.service
 systemctl enable hiddify-panel.service
+
+
+
 if [ -f "../config.env" ]; then
     # systemctl restart --now mariadb
     # sleep 4
     
-    hiddify-panel-run "hiddifypanel import-config -c $(pwd)/../config.env"
+    hiddify-panel-cli import-config -c $(pwd)/../config.env
     
     # doesn't load virtual env
     #su hiddify-panel -c "hiddifypanel import-config -c $(pwd)/../config.env"
@@ -64,7 +71,7 @@ fi
 systemctl daemon-reload >/dev/null 2>&1
 
 systemctl start hiddify-panel.service
-echo "*/1 * * * * hiddify-panel $(pwd)/update_usage.sh" >/etc/cron.d/hiddify_usage_update
+echo "*/1 * * * * root $(pwd)/update_usage.sh" >/etc/cron.d/hiddify_usage_update
 echo "0 */6 * * * hiddify-panel $(pwd)/backup.sh" >/etc/cron.d/hiddify_auto_backup
 service cron reload >/dev/null 2>&1
 

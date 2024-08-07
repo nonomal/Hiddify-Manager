@@ -34,17 +34,18 @@ function get_release_version() {
 
 function hiddifypanel_path() {
     activate_python_venv
-    python -c "import os,hiddifypanel;print(os.path.dirname(hiddifypanel.__file__),end='')"
+    /opt/hiddify-manager/.venv/bin/python -c "import os,hiddifypanel;print(os.path.dirname(hiddifypanel.__file__),end='')" 2>&1 || echo "panel is not installed yet."
 }
 function get_installed_panel_version() {
-    version=$(cat "$(hiddifypanel_path)/VERSION")
+    activate_python_venv
+    version=$(cat "$(hiddifypanel_path)/VERSION" 2>/dev/null)
     if [ -z "$version" ]; then
         version="-"
     fi
     echo $version
 }
 function get_installed_config_version() {
-    version=$(cat /opt/hiddify-manager/VERSION)
+    version=$(cat /opt/hiddify-manager/VERSION 2>/dev/null)
 
     if [ -z "$version" ]; then
         version="-"
@@ -53,9 +54,7 @@ function get_installed_config_version() {
 }
 
 function get_package_mode() {
-    cd /opt/hiddify-manager/hiddify-panel || exit
-    activate_python_venv
-    python -m hiddifypanel all-configs | jq -r '.chconfigs["0"].package_mode'
+    reload_all_configs | jq -r '.chconfigs["0"].package_mode'
 }
 
 function error() {
@@ -215,15 +214,6 @@ function msg() {
     disable_ansii_modes
 }
 
-function hiddify_api() {
-    activate_python_venv
-    data=$(
-        cd /opt/hiddify-manager/hiddify-panel || exit
-        python -m hiddifypanel "$1"
-    )
-    echo "$data"
-    return 0
-}
 
 function install_python() {
     # Check if USE_VENV is not set or is empty
@@ -234,17 +224,17 @@ function install_python() {
     # region install python3.10 system-widely
     rm -rf /usr/lib/python3/dist-packages/blinker*
     if ! python3.10 --version &>/dev/null; then
-        echo "Python 3.10 is not installed. Removing existing Python installations..."
+        echo "Python 3.10 is not installed. "
         install_package software-properties-common
         add-apt-repository -y ppa:deadsnakes/ppa
-        sudo apt-get -y remove python*
+    #    sudo apt-get -y remove python*
     fi
     install_package python3.10-dev
-    ln -sf $(which python3.10) /usr/bin/python3
-    ln -sf /usr/bin/python3 /usr/bin/python
+    #ln -sf $(which python3.10) /usr/bin/python3
+    #ln -sf /usr/bin/python3 /usr/bin/python
     if ! is_installed pip; then
-        curl https://bootstrap.pypa.io/get-pip.py | python3 -
-        pip install -U pip
+        curl https://bootstrap.pypa.io/get-pip.py | python3.10 -
+        python3.10 -m pip install -U pip
     fi
     # endregion
 
@@ -253,7 +243,6 @@ function install_python() {
     # Therefore we still use python3.10 
     # Check if USE_VENV doesn't exist or is true
     if [ "${USE_VENV}" = true ]; then
-        create_python_venv
         activate_python_venv
     fi
     # endregion
@@ -267,6 +256,7 @@ function create_python_venv() {
     fi
 }
 function activate_python_venv() {
+    create_python_venv
     venv_path="/opt/hiddify-manager/.venv"
     if [ -z "$VIRTUAL_ENV" ]; then
         #echo "Activating virtual environment..."
@@ -276,9 +266,8 @@ function activate_python_venv() {
 
 function check_hiddify_panel() {
     if [ "$MODE" != "apply_users" ]; then
-        activate_python_venv
-        (cd /opt/hiddify-manager/hiddify-panel && python3 -m hiddifypanel all-configs) >/opt/hiddify-manager/current.json
-        chmod 600 /opt/hiddify-manager/current.json
+        reload_all_configs >/dev/null
+        
         if [[ $? != 0 ]]; then
             error "Exception in Hiddify Panel. Please send the log to hiddify@gmail.com"
             echo "4" >log/error.lock
@@ -395,7 +384,7 @@ function save_firewall() {
 
 function show_progress_window() {
     disable_ansii_modes
-    install_pypi_package cli_progress==2.0.0
+    install_pypi_package cli_progress
     cli_progress --title "Hiddify Manager" $@
     exit_code=$?
     disable_ansii_modes
@@ -450,11 +439,22 @@ function hconfig() {
 }
 #TODO: check functionality when not using the venv
 function hiddify-panel-run() {
-  command="su hiddify-panel -c \"source /opt/hiddify-manager/.venv/bin/activate && $@\""
-  #command="su hiddify-panel -c '$@'"
-  eval $command
+    local user=$(whoami)
+    local base_command="cd /opt/hiddify-manager/hiddify-panel/; source /opt/hiddify-manager/.venv/bin/activate && $@"
+    local command=""
+
+    if [ "$user" == "hiddify-panel" ]; then
+        command="$base_command"
+    else
+        command="su hiddify-panel -c \"$base_command\""
+    fi
+
+    eval "$command"
 }
 
+function hiddify-panel-cli() {
+  hiddify-panel-run "python3 -m hiddifypanel $*"
+}
 # region installer utils
 function checkOS() {
     # List of supported distributions
@@ -501,6 +501,7 @@ function disable_panel_services() {
 function vercomp () {
     if [[ $1 == $2 ]]
     then
+        echo 0
         return 0
     fi
     local IFS=.
@@ -519,13 +520,16 @@ function vercomp () {
         fi
         if ((10#${ver1[i]//[!0-9]/} > 10#${ver2[i]//[!0-9]/}))
         then
+            echo 1
             return 1
         fi
         if ((10#${ver1[i]//[!0-9]/} < 10#${ver2[i]//[!0-9]/}))
         then
+            echo 2
             return 2
         fi
     done
+    echo 0
     return 0
 }
 
@@ -540,8 +544,9 @@ function check_venv_compatibility() {
     first_release_compatible_venv_version=v10.30
 
     case "$package_mode" in
-        v.*)
+        v*)
             # Check if version is greater than or equal to the compatible release version
+            
             if [ $(vercomp "$package_mode" "$first_release_compatible_venv_version") == 0 ] || [ $(vercomp "$package_mode" "$first_release_compatible_venv_version") == 1 ]; then
                 USE_VENV=true
             fi
@@ -556,14 +561,43 @@ function check_venv_compatibility() {
         ;;
         release)
             # Get the latest release version
-            latest=$(get_release_version hiddify-manager)
-            if [[ $(vercomp "$latest" "$first_release_compatible_venv_version") == 0 ]] || [[ $(vercomp "$latest" "$first_release_compatible_venv_version") == 1 ]]; then
-                USE_VENV=true
-            fi
+            USE_VENV=true
         ;;
         *)
             echo "Unknown package mode: $package_mode"
             exit 1
         ;;
     esac
+}
+
+function hiddify-http-api(){
+    api_path=$(jq -r '.api_path' /opt/hiddify-manager/current.json)
+    api_key=$(jq -r '.api_key' /opt/hiddify-manager/current.json)
+    
+
+    if [ -z "$api_path" ] || [ -z "$api_key" ]; then
+        echo "invalid config file"
+        return 1
+    fi
+    temp_file=$(mktemp)
+    http_status=$(curl -s -o $temp_file -w "%{http_code}" http://localhost:9000/${api_path}/api/v2/$1 --header "Hiddify-API-Key: ${api_key}")
+    cat $temp_file
+    rm $temp_file
+    if [ "$http_status" -ne 200 ];then
+        echo $http_status    
+        return 1$http_status
+    fi
+    return 0
+}
+
+function reload_all_configs(){
+    hiddify-http-api admin/all-configs/ > /opt/hiddify-manager/current.json
+    if [ "$?" != 0 ];then
+        hiddify-panel-cli all-configs > /opt/hiddify-manager/current.json
+        if [ $? != 0 ]; then 
+            return $?
+        fi
+    fi
+    chmod 600 /opt/hiddify-manager/current.json
+    cat /opt/hiddify-manager/current.json
 }
